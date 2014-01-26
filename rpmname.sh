@@ -2,8 +2,8 @@
 #
 # rpmname - list installed rpm packages without version
 #
-# @(#) $Revision: 1.1 $
-# @(#) $Id: rpmname.sh,v 1.1 2014/01/26 08:48:49 chongo Exp chongo $
+# @(#) $Revision: 1.2 $
+# @(#) $Id: rpmname.sh,v 1.2 2014/01/26 08:56:35 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/bin/rpmname/RCS/rpmname.sh,v $
 #
 # Copyright (c) 2014 by Landon Curt Noll.  All Rights Reserved.
@@ -39,11 +39,18 @@ fi
 
 # list debian or rpm package names
 #
+# List the unique normal packages installed AND
+# list the kernel and GPG public key packages installed.
+#
 if which dpkg &> /dev/null; then
-    dpkg --get-selections | grep -v 'deinstall$' | sed -e 's/[	 ][	 ]*install$//'
+    dpkg --get-selections |
+      grep -v 'deinstall$' |
+      sed -e 's/[	 ][	 ]*install$//'
 else
-    rpm -q -a --qf '%{NAME}\n'
-fi
+    rpm -q -a --qf '%{NAME}\n' |
+      egrep -v '^kernel$|^kernel-devel$|^kernel-doc$|^kernel-firmware$|^kernel-headers$|^gpg-pubkey-[0-9a-f][0-9a-f]*-[0-9a-f][0-9a-f]*$'
+    rpm -q kernel kernel-devel kernel-doc kernel-firmware kernel-headers gpg-pubkey
+fi | sort -u
 
 # All done!!! - Jessica Noll, Age 2
 #
