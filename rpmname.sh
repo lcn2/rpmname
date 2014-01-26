@@ -2,8 +2,8 @@
 #
 # rpmname - list installed rpm packages without version
 #
-# @(#) $Revision: 1.3 $
-# @(#) $Id: rpmname.sh,v 1.3 2014/01/26 09:20:36 chongo Exp chongo $
+# @(#) $Revision: 1.4 $
+# @(#) $Id: rpmname.sh,v 1.4 2014/01/26 09:55:38 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/bin/rpmname/RCS/rpmname.sh,v $
 #
 # Copyright (c) 2014 by Landon Curt Noll.  All Rights Reserved.
@@ -32,10 +32,40 @@
 
 # parse args
 #
-if [[ $# -ne 0 ]]; then
-    echo "usage: $0" 1>&2
+USAGE="usage: $0 [-h] [-k] [-s [-d]]
+
+	-h	print this help message and then exit (def: don't)
+	-k	include non-debian kernel and GPG public keys (def: don't)
+	-s	do not sort (def: sort)
+	-d	do not exclude duplicates (def: include duplicates)"
+D_FLAG=
+K_FLAG=
+S_FLAG=
+set -- $(/usr/bin/getopt hksd $*)
+if [[ $? != 0 ]]; then
+    echo "$0: unknown or invalid -flag" 1>&2
+    echo "$USAGE" 1>&2
     exit 1
 fi
+for i in $*; do
+    case $i in
+    -h) echo "$USAGE" 1>&2; exit 0 ;;
+    -k) K_FLAG="true" ;;
+    -s) S_FLAG="true" ;;
+    -d) D_FLAG="true" ;;
+    --) shift; break ;;
+    esac
+    shift
+done
+if [[ -n "$D_FLAG" && -z "$S_FLAG" ]]; then
+    echo "$0: FATAL: -d requires -s" 1>&2
+    exit 2
+fi
+if [[ $# != 0 ]]; then
+    echo "$USAGE" 1>&2
+    exit 3
+fi
+export K_FLAG S_FLAG D_FLAG
 
 # list debian or rpm package names
 #
@@ -49,9 +79,28 @@ if which dpkg &> /dev/null; then
 else
     rpm -q -a --qf '%{NAME}\n' 2>/dev/null |
       egrep -v '^kernel$|^kernel-devel$|^kernel-doc$|^kernel-firmware$|^kernel-headers$|^gpg-pubkey-[0-9a-f][0-9a-f]*-[0-9a-f][0-9a-f]*$'
-    rpm -q kernel kernel-devel kernel-doc kernel-firmware kernel-headers gpg-pubkey 2>/dev/null |
-      egrep -v 'is not installed$'
-fi | sort -u
+    if [[ -n "$K_FLAG" ]]; then
+	rpm -q kernel kernel-devel kernel-doc kernel-firmware kernel-headers gpg-pubkey 2>/dev/null |
+	  egrep -v 'is not installed$'
+    fi
+fi |
+if [[ -n "$S_FLAG" ]]; then
+    if [[ -n "$D_FLAG" ]]; then
+	# -s -d
+	cat
+    else
+	# -s
+	uniq
+    fi
+else
+    if [[ -n "$D_FLAG" ]]; then
+	# -u
+	sort
+    else
+	# default
+	sort -u
+    fi
+fi
 
 # All done!!! - Jessica Noll, Age 2
 #
