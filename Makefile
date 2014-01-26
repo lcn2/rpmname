@@ -3,8 +3,8 @@
 #
 # rpmname - list installed rpm packages without version
 #
-# @(#) $Revision: 1.2 $
-# @(#) $Id: Makefile,v 1.2 2014/01/26 08:49:52 chongo Exp chongo $
+# @(#) $Revision: 1.3 $
+# @(#) $Id: Makefile,v 1.3 2014/01/26 08:51:10 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/bin/rpmname/RCS/Makefile,v $
 #
 # Copyright (c) 2014 by Landon Curt Noll.  All Rights Reserved.
@@ -57,7 +57,7 @@ clean quick_clean quick_distclean distclean:
 	@true
 
 clobber quick_clobber: clean
-	@true
+	rm -f ${TARGETS}
 
 install: all
 	${INSTALL} -m 0555 ${TARGETS} ${DESTDIR}
