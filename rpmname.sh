@@ -2,9 +2,9 @@
 #
 # rpmname - list installed rpm packages without version
 #
-# @(#) $Revision$
-# @(#) $Id$
-# @(#) $Source$
+# @(#) $Revision: 1.1 $
+# @(#) $Id: rpmname.sh,v 1.1 2014/01/26 08:48:49 chongo Exp chongo $
+# @(#) $Source: /usr/local/src/bin/rpmname/RCS/rpmname.sh,v $
 #
 # Copyright (c) 2014 by Landon Curt Noll.  All Rights Reserved.
 #
@@ -40,7 +40,7 @@ fi
 # list debian or rpm package names
 #
 if which dpkg &> /dev/null; then
-    dpkg --get-selections | grep -v 'deinstall$' | sed -e 's/[\t ][\t ]*install$//'
+    dpkg --get-selections | grep -v 'deinstall$' | sed -e 's/[	 ][	 ]*install$//'
 else
     rpm -q -a --qf '%{NAME}\n'
 fi
