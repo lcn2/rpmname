@@ -3,8 +3,8 @@
 #
 # rpmname - list installed rpm packages without version
 #
-# @(#) $Revision: 1.3 $
-# @(#) $Id: Makefile,v 1.3 2014/01/26 08:51:10 chongo Exp chongo $
+# @(#) $Revision: 1.4 $
+# @(#) $Id: Makefile,v 1.4 2014/01/26 08:51:56 chongo Exp $
 # @(#) $Source: /usr/local/src/bin/rpmname/RCS/Makefile,v $
 #
 # Copyright (c) 2014 by Landon Curt Noll.  All Rights Reserved.

@@ -2,8 +2,8 @@
 #
 # rpmname - list installed rpm packages without version
 #
-# @(#) $Revision: 1.4 $
-# @(#) $Id: rpmname.sh,v 1.4 2014/01/26 09:55:38 chongo Exp chongo $
+# @(#) $Revision: 1.5 $
+# @(#) $Id: rpmname.sh,v 1.5 2014/01/26 10:23:58 chongo Exp $
 # @(#) $Source: /usr/local/src/bin/rpmname/RCS/rpmname.sh,v $
 #
 # Copyright (c) 2014 by Landon Curt Noll.  All Rights Reserved.
