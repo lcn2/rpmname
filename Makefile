@@ -1,13 +1,8 @@
-#!/bin/make
-# @(#)Makefile	1.2 04 May 1995 02:06:57
+#!/usr/bin/env make
 #
 # rpmname - list installed rpm packages without version
 #
-# @(#) $Revision: 1.4 $
-# @(#) $Id: Makefile,v 1.4 2014/01/26 08:51:56 chongo Exp $
-# @(#) $Source: /usr/local/src/bin/rpmname/RCS/Makefile,v $
-#
-# Copyright (c) 2014 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 2014,2023 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -32,9 +27,12 @@
 # Share and enjoy! :-)
 
 
-SHELL= /bin/bash
+SHELL= bash
 CC= cc
 CFLAGS= -O3 -g3
+RM= rm
+CP= cp
+CHMOD= chmod
 
 TOPNAME= bin
 INSTALL= install
@@ -46,9 +44,9 @@ TARGETS= rpmname
 all: ${TARGETS}
 
 rpmname: rpmname.sh
-	rm -f $@
-	cp -p $? $@
-	chmod +x $@
+	${RM} -f $@
+	${CP} -p $? $@
+	${CHMOD} +x $@
 
 configure:
 	@echo nothing to configure
