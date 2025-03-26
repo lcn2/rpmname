@@ -1,0 +1,287 @@
+#!/usr/bin/env bash
+#
+# rpmname - list installed packages without version
+#
+# Copyright (c) 2014,2023,2025 by Landon Curt Noll.  All Rights Reserved.
+#
+# Permission to use, copy, modify, and distribute this software and
+# its documentation for any purpose and without fee is hereby granted,
+# provided that the above copyright, this permission notice and text
+# this comment, and the disclaimer below appear in all of the following:
+#
+#       supporting documentation
+#       source copies
+#       source works derived from this source
+#       binaries derived from this source or from derived source
+#
+# LANDON CURT NOLL DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+# INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+# EVENT SHALL LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+# CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+# USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+# OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
+#
+# chongo (Landon Curt Noll) /\oo/\
+#
+# http://www.isthe.com/chongo/index.html
+# https://github.com/lcn2
+#
+# Share and enjoy!  :-)
+
+
+# setup
+#
+export VERSION="1.5.1 2025-03-26"
+NAME=$(basename "$0")
+export NAME
+#
+export V_FLAG=0
+#
+export DO_NOT_PROCESS=
+#
+export D_FLAG=
+export K_FLAG=
+export S_FLAG=
+#
+DPKG_TOOL=$(type -P dpkg)
+export DPKG_TOOL
+RPM_TOOL=$(type -P rpm)
+export RPM_TOOL
+export T_FLAG=""
+export TOOL_PATH=""
+
+# grep -E pattern to remove kernel and GPG keys
+#
+export EGREP_PATTERN='^kernel$|^kernel-devel$|^kernel-doc$|^kernel-firmware$|^kernel-headers$|^gpg-pubkey-[0-9a-f][0-9a-f]*-[0-9a-f][0-9a-f]*$'
+
+
+# usage
+#
+export USAGE="usage: $0 [-h] [-v level] [-V] [-N] [-k] [-s] [-d] [-t {dkpg|rpm} [-T path]]
+
+    -h          print help message and exit
+    -v level    set verbosity level (def level: $V_FLAG)
+    -V          print version string and exit
+
+    -N          do not process anything, just parse arguments (def: process something)
+
+    -k          include non-debian kernel and GPG public keys (def: don't)
+    -s          do not sort (def: sort)
+    -d          do not exclude duplicates (def: include duplicates)
+
+    -t {dkpg|rpm}   force use of either Debian dkpg or RedHat rpm (def: try dkpg then try rpm)
+    -T path	path to the selected type of tool (requires use of -t type)
+
+Exit codes:
+     0         all OK
+     1         some internal tool exited non-zero
+     2         -h and help string printed or -V and version string printed
+     3         command line error
+ >= 10         internal error
+
+$NAME version: $VERSION"
+
+# parse command line
+#
+while getopts :hv:VNksdt:T: flag; do
+  case "$flag" in
+    h) echo "$USAGE"
+        exit 2
+        ;;
+    v) V_FLAG="$OPTARG"
+        ;;
+    V) echo "$VERSION"
+        exit 2
+        ;;
+    N) DO_NOT_PROCESS="-N"
+        ;;
+    k) K_FLAG="true"
+	;;
+    s) S_FLAG="true"
+	;;
+    d) D_FLAG="true"
+	;;
+    t)  # parse -t type
+	T_FLAG="$OPTARG"
+	case "$T_FLAG" in
+	dkpg) ;;
+	rpm) ;;
+	*) echo "$0: ERROR: -t type must be either dkpg or rpm" 1>&2
+	   exit 3
+	   ;;
+	esac
+	;;
+    T) TOOL_PATH="$OPTARG"
+	;;
+    \?) echo "$0: ERROR: invalid option: -$OPTARG" 1>&2
+        echo 1>&2
+        echo "$USAGE" 1>&2
+        exit 3
+        ;;
+    :) echo "$0: ERROR: option -$OPTARG requires an argument" 1>&2
+        echo 1>&2
+        echo "$USAGE" 1>&2
+        exit 3
+        ;;
+    *) echo "$0: ERROR: unexpected value from getopts: $flag" 1>&2
+        echo 1>&2
+        echo "$USAGE" 1>&2
+        exit 3
+        ;;
+  esac
+done
+if [[ $V_FLAG -ge 1 ]]; then
+    echo "$0: debug[1]: debug level: $V_FLAG" 1>&2
+fi
+#
+# remove the options
+#
+shift $(( OPTIND - 1 ));
+#
+# verify arg count
+#
+if [[ $# -ne 0 ]]; then
+    echo "$0: ERROR: expected 0 args, found: $#" 1>&2
+    echo "$USAGE" 1>&2
+    exit 3
+fi
+#
+if [[ -n $TOOL_PATH && -z $T_FLAG ]]; then
+    echo "$0: FATAL: -T path requires use of -t type" 1>&2
+    echo "$USAGE" 1>&2
+    exit 3
+fi
+
+
+# if -t type, unset the other tools
+# and if -T path, set the tool path
+#
+if [[ -n $T_FLAG ]]; then
+    case "$T_FLAG" in
+    dkpg) 
+	if [[ -n $TOOL_PATH ]]; then
+	    DPKG_TOOL="$TOOL_PATH"
+	fi
+	RPM_TOOL=
+	;;
+    rpm)
+	DPKG_TOOL=
+	if [[ -n $TOOL_PATH ]]; then
+	    RPM_TOOL="$TOOL_PATH"
+	fi
+	;;
+    *) echo "$0: ERROR: -t type must be either dkpg or rpm" 1>&2
+       exit 3
+       ;;
+    esac
+fi
+
+
+# print running info if verbose
+#
+# If -v 3 or higher, print exported variables in order that they were exported.
+#
+if [[ $V_FLAG -ge 3 ]]; then
+    echo "$0: debug[3]: VERSION=$VERSION" 1>&2
+    echo "$0: debug[3]: NAME=$NAME" 1>&2
+    echo "$0: debug[3]: V_FLAG=$V_FLAG" 1>&2
+    echo "$0: debug[3]: DO_NOT_PROCESS=$DO_NOT_PROCESS" 1>&2
+    echo "$0: debug[3]: K_FLAG=$K_FLAG" 1>&2
+    echo "$0: debug[3]: D_FLAG=$D_FLAG" 1>&2
+    echo "$0: debug[3]: S_FLAG=$S_FLAG" 1>&2
+    echo "$0: debug[3]: T_FLAG=$T_FLAG" 1>&2
+    echo "$0: debug[3]: TOOL_PATH=$TOOL_PATH" 1>&2
+    echo "$0: debug[3]: DPKG_TOOL=$DPKG_TOOL" 1>&2
+    echo "$0: debug[3]: RPM_TOOL=$RPM_TOOL" 1>&2
+    echo "$0: debug[3]: EGREP_PATTERN=$EGREP_PATTERN" 1>&2
+fi
+
+
+# firewall - must have at least one tool
+#
+if [[ -z $DPKG_TOOL && -z $RPM_TOOL ]]; then
+    echo "$0: ERROR: cannot find either dkpg nor rpm" 1>&2
+    echo "$0: notice: consider using -t tool and -T path if there are such tools on this system" 1>&2
+    exit 3
+fi
+
+
+# -N stops early before any processing is performed
+#
+if [[ -n $DO_NOT_PROCESS ]]; then
+    if [[ $V_FLAG -ge 3 ]]; then
+        echo "$0: debug[3]: arguments parsed, -N given, exiting 0" 1>&2
+    fi
+    exit 0
+fi
+
+
+# list debian or rpm package names
+#
+
+
+# case dpkg: list debian package names
+#
+if [[ -n $DKPG_TOOL ]]; then
+
+    if [[ $V_FLAG -ge 1 ]]; then
+	# This echo is just a debug message, not a critical message
+	#
+	# SC2028 (info): echo may not expand escape sequences. Use printf.
+	# https://www.shellcheck.net/wiki/SC2028
+	# shellcheck disable=SC2028
+	echo "$0: debug[1]: $DKPG_TOOL --get-selections 2>/dev/null | grep -v 'deinstall$' | sed -E -e 's/[\\t ]+install$//'" 1>&2
+    fi
+
+    "$DKPG_TOOL" --get-selections 2>/dev/null | grep -v 'deinstall$' | sed -E -e 's/[\t ]+install$//'
+
+# else rpm: list rpm package names
+#
+else
+
+    if [[ $V_FLAG -ge 1 ]]; then
+	# This echo is just a debug message, not a critical message
+	#
+	# SC2028 (info): echo may not expand escape sequences. Use printf.
+	# https://www.shellcheck.net/wiki/SC2028
+	# shellcheck disable=SC2028
+	echo "$0: debug[1]: $RPM_TOOL -q -a --qf '%{NAME}\n' 2>/dev/null | grep -E -v $EGREP_PATTERN" 1>&2
+	if [[ -n "$K_FLAG" ]]; then
+	    echo "$0: debug[1]: $RPM_TOOL -q kernel kernel-devel kernel-doc kernel-firmware kernel-headers gpg-pubkey 2>/dev/null |  grep -E -v 'is not installed$'" 1>&2
+	fi
+    fi
+
+    "$RPM_TOOL" -q -a --qf '%{NAME}\n' 2>/dev/null | grep -E -v "$EGREP_PATTERN"
+    if [[ -n "$K_FLAG" ]]; then
+	"$RPM_TOOL" -q kernel kernel-devel kernel-doc kernel-firmware kernel-headers gpg-pubkey 2>/dev/null |
+	  grep -E -v 'is not installed$'
+    fi
+
+# -d and/or -s processing
+#
+# List the unique normal packages installed AND/OR
+# list the kernel and GPG public key packages installed.
+#
+fi | if [[ -n "$S_FLAG" ]]; then
+	if [[ -n "$D_FLAG" ]]; then
+	    # -s -d
+	    cat
+	else
+	    # -s
+	    uniq
+	fi
+    else
+	if [[ -n "$D_FLAG" ]]; then
+	    # -u
+	    sort
+	else
+	    # default
+	    sort -u
+	fi
+    fi
+
+
+# All done!!! - Jessica Noll, Age 2
+#
+exit 0
