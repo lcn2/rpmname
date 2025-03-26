@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# rpmname - list installed packages without version
+# rpmname - list installed package names without version strings
 #
 # Copyright (c) 2014,2023,2025 by Landon Curt Noll.  All Rights Reserved.
 #
@@ -54,6 +54,12 @@ export TOOL_PATH=""
 # grep -E pattern to remove kernel and GPG keys
 #
 export EGREP_PATTERN='^kernel$|^kernel-devel$|^kernel-doc$|^kernel-firmware$|^kernel-headers$|^gpg-pubkey-[0-9a-f][0-9a-f]*-[0-9a-f][0-9a-f]*$'
+
+# names of kernel and GPG key packages
+#
+unset KNAME
+declare -ag KNAME
+KNAME=(kernel kernel-devel kernel-doc kernel-firmware kernel-headers gpg-pubkey)
 
 
 # usage
@@ -159,7 +165,7 @@ fi
 #
 if [[ -n $T_FLAG ]]; then
     case "$T_FLAG" in
-    dkpg) 
+    dkpg)
 	if [[ -n $TOOL_PATH ]]; then
 	    DPKG_TOOL="$TOOL_PATH"
 	fi
@@ -195,6 +201,9 @@ if [[ $V_FLAG -ge 3 ]]; then
     echo "$0: debug[3]: DPKG_TOOL=$DPKG_TOOL" 1>&2
     echo "$0: debug[3]: RPM_TOOL=$RPM_TOOL" 1>&2
     echo "$0: debug[3]: EGREP_PATTERN=$EGREP_PATTERN" 1>&2
+    for index in "${!KNAME[@]}"; do
+	echo "$0: debug[3]: KNAME[$index]=${KNAME[$index]}" 1>&2
+    done
 fi
 
 
@@ -203,6 +212,7 @@ fi
 if [[ -z $DPKG_TOOL && -z $RPM_TOOL ]]; then
     echo "$0: ERROR: cannot find either dkpg nor rpm" 1>&2
     echo "$0: notice: consider using -t tool and -T path if there are such tools on this system" 1>&2
+    echo "$0: notice: this command is only useful on Linux-type system: NOT on macOS for example" 1>&2
     exit 3
 fi
 
@@ -248,14 +258,13 @@ else
 	# shellcheck disable=SC2028
 	echo "$0: debug[1]: $RPM_TOOL -q -a --qf '%{NAME}\n' 2>/dev/null | grep -E -v $EGREP_PATTERN" 1>&2
 	if [[ -n "$K_FLAG" ]]; then
-	    echo "$0: debug[1]: $RPM_TOOL -q kernel kernel-devel kernel-doc kernel-firmware kernel-headers gpg-pubkey 2>/dev/null |  grep -E -v 'is not installed$'" 1>&2
+	    echo "$0: debug[1]: $RPM_TOOL -q ${KNAME[*]} 2>/dev/null |  grep -E -v 'is not installed$'" 1>&2
 	fi
     fi
 
     "$RPM_TOOL" -q -a --qf '%{NAME}\n' 2>/dev/null | grep -E -v "$EGREP_PATTERN"
     if [[ -n "$K_FLAG" ]]; then
-	"$RPM_TOOL" -q kernel kernel-devel kernel-doc kernel-firmware kernel-headers gpg-pubkey 2>/dev/null |
-	  grep -E -v 'is not installed$'
+	"$RPM_TOOL" -q "${KNAME[@]}" 2>/dev/null | grep -E -v 'is not installed$'
     fi
 
 # -d and/or -s processing
