@@ -10,9 +10,24 @@ sudo make install
 ```
 
 
-# To use
+# Examples
+
+List all package names other than kernel packages and GPG keys
 
 ```sh
+$ /usr/local/bin/rpmname
+```
+
+List all package names, including kernel packages and GPG keys
+
+```sh
+$ /usr/local/bin/rpmname -k
+```
+
+
+# To use
+
+```
 /usr/local/bin/rpmname [-h] [-v level] [-V] [-N] [-k] [-s] [-d] [-t {dkpg|rpm} [-T path]]
 
     -h          print help message and exit
@@ -36,21 +51,6 @@ Exit codes:
  >= 10         internal error
 
 rpmname version: 1.5.1 2025-03-26
-```
-
-
-# Examples
-
-List all package names other than kernel packages and GPG keys
-
-```sh
-/usr/local/bin/rpmname
-```
-
-List all package names, including kernel packages and GPG keys
-
-```sh
-/usr/local/bin/rpmname -k
 ```
 
 
